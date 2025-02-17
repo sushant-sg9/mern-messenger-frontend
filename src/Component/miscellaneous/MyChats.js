@@ -23,7 +23,7 @@ const MyChats = ({ fetchAgain }) => {
           Authorization: `Bearer ${user.token}`,
         },
       };
-  
+
       const { data } = await axios.get(`${baseURL}api/chat`, config);
       setChats(data);
     } catch (error) {
@@ -40,7 +40,7 @@ const MyChats = ({ fetchAgain }) => {
 
   useEffect(() => {
     const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      setLoggedUser(userInfo);
+    setLoggedUser(userInfo);
     fetchChats();
   }, [fetchAgain, fetchChats]);
 
@@ -67,13 +67,13 @@ const MyChats = ({ fetchAgain }) => {
       >
         My Chats
         <GroupChatModal>
-        <Button
-          display="flex"
-          fontSize={{ base: "17px", md: "10px", lg: "17px" }}
-          rightIcon={<AddIcon />}
-        >
-          New Group
-        </Button>
+          <Button
+            display="flex"
+            fontSize={{ base: "17px", md: "10px", lg: "17px" }}
+            rightIcon={<AddIcon />}
+          >
+            New Group
+          </Button>
         </GroupChatModal>
       </Box>
 
@@ -84,7 +84,7 @@ const MyChats = ({ fetchAgain }) => {
         bg={"#F8F8F8"}
         w={"100%"}
         h={"100%"}
-        borderRadius={'lg'}
+        borderRadius={"lg"}
         overflowY={"hidden"}
       >
         {chats ? (
@@ -101,20 +101,19 @@ const MyChats = ({ fetchAgain }) => {
                 key={chat._id}
               >
                 <Text>
-                  {!chat.isGroupChat ?
-                    getSender(loggedUser, chat.users)
+                  {!chat.isGroupChat
+                    ? getSender(loggedUser, chat.users)
                     : chat.chatName}
                 </Text>
               </Box>
-            ))
-            }
+            ))}
           </Stack>
         ) : (
           <ChatLoading />
         )}
       </Box>
     </Box>
-  )
-}
+  );
+};
 
-export default MyChats
+export default MyChats;
