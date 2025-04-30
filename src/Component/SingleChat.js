@@ -28,16 +28,19 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [newMessage, setNewMessage] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
   const toast = useToast();
-  // const [typing, setTyping] = useState(false)
-  // const [istyping, setIsTyping] = useState(false)
+  const [typing, setTyping] = useState(false)
+  const [isTyping, setIsTyping] = useState(false)
 
+ 
   useEffect(() => {
     socket = io(ENDPOINT);
     socket.emit("setup", user);
-    socket.on("connected", () => setSocketConnected(true));
-
+    socket.on('connected', () => setSocketConnected(true));
+    
+    socket.on('typing', () => setIsTyping(true));
+    socket.on('stop typing', () => setIsTyping(false));
+    
     return () => {
-      socket.off("connected");
       socket.disconnect();
     };
   }, [user]);
@@ -79,19 +82,22 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   }, [selectedChat, fetchMessage]);
 
   useEffect(() => {
-    socket.on("message received", (newMessageRecevied) => {
-      if (
-        !selectedChatCompare ||
-        selectedChatCompare._id !== newMessageRecevied.chat._id
-      ) {
+    socket.on('message recieved', (newMessageReceived) => {
+      if (!selectedChatCompare || selectedChatCompare._id !== newMessageReceived.chat._id) {
+   
       } else {
-        setMessages([...messages, newMessageRecevied]);
+        setMessages((prevMessages) => [...prevMessages, newMessageReceived]);
       }
     });
-  });
+    
+    return () => {
+      socket.off('message recieved');
+    };
+  }, []);
 
   const sendMessage = async (e) => {
     if (e.key === "Enter" && newMessage) {
+      socket.emit('stop typing', selectedChat._id);
       try {
         const config = {
           headers: {
@@ -127,12 +133,32 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
   const typingHandler = (e) => {
     setNewMessage(e.target.value);
+
+    if (!socketConnected) return;
+
+    if (!typing) {
+      setTyping(true);
+      socket.emit('typing', selectedChat._id);
+    }
+
+    let lastTypingTime = new Date().getTime();
+    const timerLength = 3000;
+    
+    setTimeout(() => {
+      const timeNow = new Date().getTime();
+      const timeDiff = timeNow - lastTypingTime;
+      
+      if (timeDiff >= timerLength && typing) {
+        socket.emit('stop typing', selectedChat._id);
+        setTyping(false);
+      }
+    }, timerLength);
   };
-  console.log(socketConnected);
 
   return (
     <>
-      {selectedChat ? (
+    {
+      selectedChat ? (
         <>
           <Text
             fontSize={{ base: "28px", md: "30px" }}
@@ -166,7 +192,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
               </>
             )}
           </Text>
-          <Box
+          <Box 
             display="flex"
             flexDir="column"
             justifyContent="flex-end"
@@ -176,7 +202,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             h="100%"
             borderRadius="lg"
             overflowY="hidden"
-          >
+          > 
             {loading ? (
               <Spinner
                 size="xl"
@@ -186,33 +212,34 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                 margin={"auto"}
               />
             ) : (
-              <div className="messages">
+              <div className='messages'>
                 <ScrollableChat messages={messages} />
               </div>
             )}
+            
+            {isTyping ? (
+              <div>
+                <Text fontSize="xs" color="gray.500">Typing...</Text>
+              </div>
+            ) : null}
+            
             <FormControl onKeyDown={sendMessage} isRequired mt={3}>
               <Input
                 variant={"filled"}
-                placeholder="Enter a Message"
+                placeholder='Enter a Message'
                 bg="#E0E0E0"
                 onChange={typingHandler}
                 value={newMessage}
               />
             </FormControl>
           </Box>
-        </>
+        </> 
       ) : (
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          h="100%"
-        >
-          <Text fontSize="3xl" pb={3} fontFamily="Work sans">
-            Select a user to start chatting
-          </Text>
+        <Box display="flex" alignItems="center" justifyContent="center" h="100%">
+          <Text fontSize="3xl" pb={3} fontFamily="Work sans">Select a user to start chatting</Text>
         </Box>
-      )}
+      )
+    }
     </>
   );
 };
